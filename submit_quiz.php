@@ -1,88 +1,52 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit();
-}
+if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit(); }
 include 'config.php';
 $user_id = $_SESSION['user_id'];
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['question'])) {
     $answers = $_POST['question'];
     $career_count = [];
-    $valid = true;
-
-    // ---- VALIDATION START ----
-    // Ensure all submitted values are valid integers (security)
-    foreach ($answers as $question_id => $career_id) {
-        // Check if question_id is numeric and career_id is numeric
-        if (!is_numeric($question_id) || !is_numeric($career_id)) {
-            $valid = false;
-            break;
-        }
-        // Ensure question_id and career_id are greater than 0
-        if (intval($question_id) <= 0 || intval($career_id) <= 0) {
-            $valid = false;
-            break;
-        }
-    }
-
-    if (!$valid) {
-        // Invalid data received
-        header("Location: quiz.php?error=invalid_data");
-        exit();
-    }
-    // ---- VALIDATION END ----
-
-    // Count career matches
-    foreach ($answers as $question_id => $career_id) {
-        $career_id = intval($career_id);
-        if (!isset($career_count[$career_id])) $career_count[$career_id] = 0;
-        $career_count[$career_id]++;
+    foreach ($answers as $qid => $cid) { 
+        $cid = intval($cid); 
+        if(!isset($career_count[$cid])) $career_count[$cid] = 0; 
+        $career_count[$cid]++; 
     }
     
-    // Find the top career
     $top_career_id = array_keys($career_count, max($career_count))[0];
     $total_questions = count($answers);
     $match_percentage = round(($career_count[$top_career_id] / $total_questions) * 100, 2);
     
-    // Fetch career details
     $sql = "SELECT * FROM tbl_careers WHERE career_id = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $top_career_id);
     $stmt->execute();
     $career = $stmt->get_result()->fetch_assoc();
     
-    // Fetch resources for this career
     $sql_res = "SELECT * FROM tbl_resources WHERE career_id = ?";
     $stmt_res = $conn->prepare($sql_res);
     $stmt_res->bind_param("i", $top_career_id);
     $stmt_res->execute();
     $resources = $stmt_res->get_result();
 
-    // Save result to database
     $sql_save = "INSERT INTO tbl_quiz_results (user_id, career_id, match_percentage) VALUES (?, ?, ?)";
     $stmt_save = $conn->prepare($sql_save);
     $stmt_save->bind_param("iid", $user_id, $top_career_id, $match_percentage);
     $stmt_save->execute();
-
+    
     $rec_text = "Based on your answers, we recommend " . $career['career_name'] . " (" . $match_percentage . "% match).";
     $sql_rec = "INSERT INTO tbl_recommendations (user_id, career_id, recommendation_text) VALUES (?, ?, ?)";
     $stmt_rec = $conn->prepare($sql_rec);
     $stmt_rec->bind_param("iis", $user_id, $top_career_id, $rec_text);
     $stmt_rec->execute();
+    $conn->close();
+} else { header("Location: quiz.php"); exit(); }
 
-} else {
-    header("Location: quiz.php");
-    exit();
-}
-$conn->close();
-
-$page_title = 'Your Career Match - PathSeeker';
+$page_title = 'Result';
 include 'includes/header.php';
 ?>
 
-<div class="container container-wide" style="max-width:900px; margin:0 auto;">
+<div class="container-wide">
     <!-- Result Header -->
     <div class="result-header">
         <h1>🎯 Your Career Match!</h1>
@@ -169,7 +133,7 @@ include 'includes/header.php';
     <!-- Actions -->
     <div class="actions">
         <a href="quiz.php" class="btn btn-primary" style="width:auto;">🔄 Retake Quiz</a>
-        <a href="careers.php" class="btn btn-outline" style="width:auto;">💼 Explore All Careers</a>
+        <a href="dashboard.php" class="btn btn-outline" style="width:auto;">🏠 Go to Dashboard</a>
     </div>
 </div>
 
