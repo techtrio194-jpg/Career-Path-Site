@@ -1,5 +1,6 @@
+</div> <!-- Closing container -->
 <div class="footer">
-    <p>PathSeeker © <?php echo date('Y'); ?> — Your Career, Your Future</p>
+    PathSeeker © <?php echo date('Y'); ?>
 </div>
 </body>
 </html>
